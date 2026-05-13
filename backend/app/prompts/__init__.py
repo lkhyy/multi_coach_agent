@@ -1,0 +1,6 @@
+from app.prompts.scheduler_system import (
+    SCHEDULER_BOOTSTRAP_MARKER,
+    SCHEDULER_SYSTEM_PROMPT,
+)
+
+__all__ = ["SCHEDULER_BOOTSTRAP_MARKER", "SCHEDULER_SYSTEM_PROMPT"]
