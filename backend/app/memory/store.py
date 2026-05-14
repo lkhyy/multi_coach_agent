@@ -55,8 +55,8 @@ def save_long_term_memory(user_id: str, memory: LongTermMemory) -> None:
     tmp.replace(path)
 
 
-def update_long_term_memory_from_messages(user_id: str, messages: list[BaseMessage]) -> LongTermMemory:
-    """轻量规则抽取：不依赖额外模型，更新用户长期偏好。"""
+def update_long_term_memory_heuristic(user_id: str, messages: list[BaseMessage]) -> LongTermMemory:
+    """轻量规则抽取（LLM 不可用时的回退）。"""
     mem = load_long_term_memory(user_id)
     user_texts = [str(m.content or "") for m in messages if isinstance(m, HumanMessage)]
     for text in user_texts[-12:]:
@@ -67,6 +67,12 @@ def update_long_term_memory_from_messages(user_id: str, messages: list[BaseMessa
     _cap_list(mem.stable_facts, settings.long_term_list_max_items)
     save_long_term_memory(user_id, mem)
     return mem
+
+
+def update_long_term_memory_from_messages(user_id: str, messages: list[BaseMessage]) -> LongTermMemory:
+    from app.memory.extract import update_long_term_memory_pipeline
+
+    return update_long_term_memory_pipeline(user_id, messages)
 
 
 def _ingest_text(mem: LongTermMemory, text: str) -> None:

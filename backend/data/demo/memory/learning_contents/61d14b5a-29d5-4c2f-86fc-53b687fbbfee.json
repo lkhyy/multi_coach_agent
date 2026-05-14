@@ -1,0 +1,51 @@
+{
+  "content_id": "61d14b5a-29d5-4c2f-86fc-53b687fbbfee",
+  "title": "大模型系统学习路线图",
+  "summary": "进入第一阶段第一课：深入理解Transformer中Self-Attention机制。从RNN局限讲起，引出Transformer并行化核心思想。详细拆解Q、K、V向量计算过程与数学公式，通过分步解释和PyTorch代码演示单头注意力实现。用户确认按此路线学习。",
+  "keywords": [
+    "Transformer",
+    "Self-Attention",
+    "QKV",
+    "softmax",
+    "缩放因子",
+    "手写代码",
+    "PyTorch"
+  ],
+  "key_points": [
+    "Transformer取代RNN/LSTM: 解决并行化和长距离依赖问题",
+    "Self-Attention核心思想: 每个token与整句所有token交互计算加权关注分数",
+    "QKV向量计算: Q=x·W^Q, K=x·W^K, V=x·W^V",
+    "Attention公式: softmax(QK^T/sqrt(d_k)) × V",
+    "缩放因子原因: 防止点积过大导致softmax梯度消失",
+    "PyTorch实现: 定义W_Q/W_K/W_V线性层, 计算注意力分数并加权求和",
+    "用户已确认学习路线图并开始第一课",
+    "学习方式: 理论推导+公式拆解+手写代码实战"
+  ],
+  "updated_at": "2026-05-13T18:02:59.380966+00:00",
+  "learning_plan": "## 大模型系统学习路线图\n\n**目标**：系统掌握大模型，从事AI应用开发岗位\n**基础**：有一定机器学习基础，偏好理论实战结合、手写代码\n\n### 第一阶段：核心基础夯实（2-3周）\n- Transformer原理：Self-Attention、Multi-Head Attention、Positional Encoding、残差连接、LayerNorm\n- 手写Transformer Block（PyTorch）\n- 分词器：BPE/WordPiece/Unigram原理，训练BPE tokenizer\n- 预训练范式：GPT（自回归）、BERT（自编码）、T5（Seq2Seq）\n- 跑通GPT-2/nanoGPT源码\n\n### 第二阶段：LLM训练与微调（3-4周）\n- 预训练实战：数据清洗、混合精度、分布式训练概念\n- 用nanoGPT训练小模型\n- SFT监督微调：指令微调、LoRA/QLoRA\n- 用PEFT微调7B模型\n- RLHF/DPO：Reward Model、PPO、DPO\n- 跑DPO训练流程\n- RAG系统搭建：Embedding、向量数据库、检索链\n\n### 第三阶段：应用开发与工程化（3-4周）\n- Prompt Engineering：Few-shot、CoT、ReAct、Structured Output\n- LangChain/LlamaIndex：Chain、Agent、Tool、Memory\n- 搭建带工具调用的AI Agent\n- 模型部署与推理优化：vLLM、量化、API化\n- 用vLLM部署模型并封装REST API\n- 向量数据库：FAISS、Chroma、Milvus\n\n### 第四阶段：综合项目与面试准备（2-3周）\n- 综合项目：涵盖RAG+Agent+微调+部署全流程\n- 面试准备：理论、系统设计、手撕代码\n\n### 核心资源\n- 论文：Attention Is All You Need → GPT系列 → InstructGPT → LLaMA\n- 视频：Andrej Karpathy \"Let's build GPT from scratch\"\n- 实战库：HuggingFace Transformers、PEFT、TRL、vLLM、LangChain",
+  "mastery_status": "第一阶段进行中，刚开始学习Transformer原理",
+  "progress_summary": "已确认四个阶段的学习路线图，正式开始第一阶段：核心基础夯实。从Transformer原理和手写Attention开始。",
+  "plan_confirmed_at": "2026-05-13T18:01:39.735385+00:00",
+  "plan_phases": [
+    {
+      "title": "P0 第一阶段：核心基础夯实",
+      "status": "in_progress",
+      "progress_pct": "5"
+    },
+    {
+      "title": "P1 第二阶段：LLM训练与微调",
+      "status": "not_started",
+      "progress_pct": "0"
+    },
+    {
+      "title": "P2 第三阶段：应用开发与工程化",
+      "status": "not_started",
+      "progress_pct": "0"
+    },
+    {
+      "title": "P3 第四阶段：综合项目与面试准备",
+      "status": "not_started",
+      "progress_pct": "0"
+    }
+  ]
+}

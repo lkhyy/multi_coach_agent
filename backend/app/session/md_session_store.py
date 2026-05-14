@@ -120,9 +120,38 @@ def load_thread(user_id: str, thread_id: str) -> list[BaseMessage]:
     path = session_md_path(user_id, thread_id)
     if not path.is_file():
         return []
-    raw = path.read_text(encoding="utf-8")
+    raw = path.read_text(encoding="utf-8", errors="replace")
     _, body = _parse_simple_frontmatter(raw)
     return _parse_message_blocks(body)
+
+
+def list_session_threads(user_id: str) -> list[dict[str, str]]:
+    """列出用户 sessions 目录下的对话线程序列（按 md 修改时间新在前）。"""
+    d = user_root(user_id) / "sessions"
+    if not d.is_dir():
+        return []
+    rows: list[tuple[float, dict[str, str]]] = []
+    for p in d.glob("*.md"):
+        if not p.is_file():
+            continue
+        tid = p.stem
+        if _sanitize_thread_id(tid) != tid:
+            continue
+        try:
+            mtime = p.stat().st_mtime
+        except OSError:
+            continue
+        rows.append(
+            (
+                mtime,
+                {
+                    "thread_id": tid,
+                    "updated_at": datetime.fromtimestamp(mtime, tz=timezone.utc).isoformat(),
+                },
+            )
+        )
+    rows.sort(key=lambda x: x[0], reverse=True)
+    return [r[1] for r in rows]
 
 
 # 标题必须单行：禁止 \s* 跨行吞掉正文（否则 user 块会把「hi」吃进 match）

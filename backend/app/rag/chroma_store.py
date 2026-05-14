@@ -30,6 +30,8 @@ def chroma_upsert(
     text: str,
 ) -> None:
     enc = get_bge_m3_encoder()
+    if enc is None:
+        return
     vec = enc.encode([text])[0]
     col = get_chroma_collection(user_chroma_path)
     col.upsert(
@@ -42,6 +44,8 @@ def chroma_upsert(
 
 def chroma_query(user_chroma_path: Path, *, user_id: str, query: str, limit: int = 20) -> list[tuple[str, float]]:
     enc = get_bge_m3_encoder()
+    if enc is None:
+        return []
     vec = enc.encode([query])[0]
     col = get_chroma_collection(user_chroma_path)
     res = col.query(

@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "entries": [
+    {
+      "content_id": "61d14b5a-29d5-4c2f-86fc-53b687fbbfee",
+      "title": "大模型系统学习路线图",
+      "summary": "进入第一阶段第一课：深入理解Transformer中Self-Attention机制。从RNN局限讲起，引出Transformer并行化核心思想。详细拆解Q、K、V向量计算过程与数学公式，通过分步解释和PyTorch代码演示单头注意力实现。用户确认按此路线学习。",
+      "keywords": [
+        "Transformer",
+        "Self-Attention",
+        "QKV",
+        "softmax",
+        "缩放因子",
+        "手写代码",
+        "PyTorch"
+      ],
+      "updated_at": "2026-05-13T18:02:59.380966+00:00",
+      "has_learning_plan": true,
+      "mastery_status": "第一阶段进行中，刚开始学习Transformer原理",
+      "plan_confirmed_at": "2026-05-13T18:01:39.735385+00:00",
+      "aggregate_plan_status_cn": "进行中",
+      "plan_phases": [
+        {
+          "title": "P0 第一阶段：核心基础夯实",
+          "status": "in_progress",
+          "progress_pct": "5"
+        },
+        {
+          "title": "P1 第二阶段：LLM训练与微调",
+          "status": "not_started",
+          "progress_pct": "0"
+        },
+        {
+          "title": "P2 第三阶段：应用开发与工程化",
+          "status": "not_started",
+          "progress_pct": "0"
+        },
+        {
+          "title": "P3 第四阶段：综合项目与面试准备",
+          "status": "not_started",
+          "progress_pct": "0"
+        }
+      ]
+    }
+  ]
+}

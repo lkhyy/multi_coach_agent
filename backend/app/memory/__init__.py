@@ -1,4 +1,5 @@
 from app.memory.context import (
+    LEARNING_CONTENT_MARKER,
     LONG_TERM_MEMORY_MARKER,
     build_runtime_context_messages,
     incremental_new_messages,
@@ -11,6 +12,7 @@ from app.memory.store import (
 )
 
 __all__ = [
+    "LEARNING_CONTENT_MARKER",
     "LONG_TERM_MEMORY_MARKER",
     "LongTermMemory",
     "build_runtime_context_messages",

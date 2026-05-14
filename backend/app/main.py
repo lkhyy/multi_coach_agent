@@ -8,26 +8,30 @@ _BACKEND_ROOT = _Path(__file__).resolve().parent.parent
 if str(_BACKEND_ROOT) not in sys.path:
     sys.path.insert(0, str(_BACKEND_ROOT))
 
-import asyncio
-import contextlib
-import logging
-from contextlib import asynccontextmanager
-from pathlib import Path
-
 from dotenv import load_dotenv
-from fastapi import FastAPI, WebSocket
-from fastapi.middleware.cors import CORSMiddleware
-
-from app.api.session_routes import router as session_router
-from app.api.ws import scheduler_websocket_loop
-from app.config import settings
-from app.services.idle_queue_processor import idle_queue_processor_loop
 
 _env_file = _BACKEND_ROOT / ".env"
 if _env_file.is_file():
     load_dotenv(_env_file)
 else:
     load_dotenv()
+
+import asyncio
+import contextlib
+import logging
+from contextlib import asynccontextmanager
+from pathlib import Path
+
+from fastapi import FastAPI, WebSocket
+from fastapi.middleware.cors import CORSMiddleware
+
+from app.api.auth_routes import router as auth_router
+from app.api.me_routes import router as me_router
+from app.api.session_routes import router as session_router
+from app.api.ws import scheduler_websocket_loop
+from app.auth.tokens import decode_access_token_subject
+from app.config import settings
+from app.services.idle_queue_processor import idle_queue_processor_loop
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -56,6 +60,8 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="multi-coach-agent", lifespan=lifespan)
 
 app.include_router(session_router)
+app.include_router(auth_router)
+app.include_router(me_router)
 
 app.add_middleware(
     CORSMiddleware,
@@ -73,7 +79,20 @@ def health():
 
 @app.websocket("/ws/{user_id}")
 async def ws_scheduler(user_id: str, websocket: WebSocket):
+    """兼容旧客户端：路径中的 user_id 即身份（无令牌校验）。新前端请使用 /api/ws。"""
     await scheduler_websocket_loop(websocket, user_id=user_id)
+
+
+@app.websocket("/api/ws")
+async def ws_scheduler_authed(websocket: WebSocket):
+    token = str(websocket.query_params.get("token") or "")
+    user_id = decode_access_token_subject(token)
+    if not user_id:
+        await websocket.accept()
+        await websocket.close(code=1008)
+        return
+    await websocket.accept()
+    await scheduler_websocket_loop(websocket, user_id=user_id, pre_accepted=True)
 
 
 if __name__ == "__main__":

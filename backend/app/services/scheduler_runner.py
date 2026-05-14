@@ -21,11 +21,15 @@ async def run_scheduler_followup_cycles(
     *,
     user_id: str,
     ws: WebSocket | None,
+    thread_id: str | None = None,
 ) -> list[BaseMessage]:
     """与 WS 请求内相同的「多轮主图 + 队列 drain / 续跑」逻辑；ws=None 时不向前端推送。"""
+    from app.session.thread_registry import get_last_thread
+
     graph = get_scheduler_graph()
+    effective_tid = (thread_id or "").strip() or get_last_thread(user_id)
     cfg: dict[str, Any] = {
-        "configurable": {"user_id": user_id},
+        "configurable": {"user_id": user_id, "thread_id": effective_tid},
         "recursion_limit": max(4, int(settings.scheduler_recursion_limit)),
     }
     max_rounds = max(1, int(settings.max_scheduler_auto_rounds))
