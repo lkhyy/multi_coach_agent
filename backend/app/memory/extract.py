@@ -265,12 +265,14 @@ def refresh_learning_content_with_llm(
             "should_merge_into_bound_topic=true，并合并输出 title/summary/keywords/key_points（"
             f"key_points 最多 {cap_kp} 条，keywords 最多 {cap_kw} 个；不要编造）。\n"
             "title 必须是具体知识/技能名称；禁止「路线图」「学习计划」「我要学习…」「学习大模型」等意图句或元标签。\n"
+            "若 subject_title_locked 为 true，则 title 字段只能与「当前 title」完全一致或留空，禁止改写课题名。\n"
             "2) 若主要是天气、闲聊、另一门课、与当前 title/要点明显无关的泛问，"
             "should_merge_into_bound_topic=false，其它字段可留空。"
         )
         human = (
             f"content_id: {record.content_id}\n"
             f"当前 title: {record.title}\n"
+            f"subject_title_locked: {record.subject_title_locked}\n"
             f"当前 summary: {record.summary}\n"
             f"当前 keywords: {record.keywords}\n"
             f"当前 key_points: {record.key_points}\n\n"
@@ -284,7 +286,9 @@ def refresh_learning_content_with_llm(
                 record.content_id,
             )
             return LEARN_REFRESH_SKIPPED_IRRELEVANT
-        title_locked = bool((record.plan_confirmed_at or "").strip()) or bool(record.plan_phases)
+        title_locked = bool(record.subject_title_locked) or bool((record.plan_confirmed_at or "").strip()) or bool(
+            record.plan_phases
+        )
         if title_locked:
             merged_title = record.title
         else:
@@ -306,6 +310,7 @@ def refresh_learning_content_with_llm(
             progress_summary=record.progress_summary,
             plan_confirmed_at=record.plan_confirmed_at,
             plan_phases=list(record.plan_phases),
+            subject_title_locked=record.subject_title_locked,
         )
         save_learning_content(user_id, merged)
         return LEARN_REFRESH_MERGED

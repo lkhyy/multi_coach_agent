@@ -170,6 +170,13 @@ body {
   color: inherit;
 }
 
+.sidebar-plan-topic {
+  margin: 0 0 6px;
+  padding: 0 2px;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
 .learn-col-phase {
   font-size: 12px;
   line-height: 1.45;

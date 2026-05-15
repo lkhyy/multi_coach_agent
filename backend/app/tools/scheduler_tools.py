@@ -10,7 +10,7 @@ from langchain_core.tools import tool
 from langgraph.prebuilt import InjectedState
 
 from app.memory.context import strip_runtime_only_messages
-from app.memory.extract import update_long_term_memory_pipeline
+from app.memory.extract import _is_meta_or_intent_title, update_long_term_memory_pipeline
 from app.memory.learning_store import load_learning_content, parse_plan_phases_json_string, save_learning_content
 from app.memory.thread_learning import get_thread_learning_content_id
 from app.rag.ingest import ingest_plain_text
@@ -107,6 +107,44 @@ def build_scheduler_tools():
         return f"已排队后台合并用户档案（理由：{rationale}）。你可继续回复用户。"
 
     @tool
+    async def scheduler_confirm_learning_subject(
+        subject_title: str,
+        rationale: str,
+        config: RunnableConfig,
+    ) -> str:
+        """在用户口头认可后调用：将当前线程绑定的「学习内容」**课题标题**定稿并**永久锁定**（侧栏显示名不再被自动合并改写）。
+        一条学习内容应对应**一个大知识点级**的主题（一门小课粒度），勿把多个无关大主题塞进同一 content。
+        `subject_title`：最终课题名，须简短、具体（如「Transformer 自注意力」），禁止意图句或「学习计划」类元标签。"""
+        user_id = str(config["configurable"].get("user_id") or "")
+        thread_id = str(config["configurable"].get("thread_id") or "")
+        if not user_id:
+            return "缺少 user_id。"
+        if not thread_id:
+            return "缺少 thread_id，无法定位学习内容绑定。"
+        cid = get_thread_learning_content_id(user_id, thread_id)
+        if not cid:
+            return "当前线程尚未绑定学习内容；请先开启学习对话后再确认课题。"
+        raw = (subject_title or "").strip()
+        if not raw:
+            return "subject_title 不能为空。"
+        if _is_meta_or_intent_title(raw):
+            return "课题名过于笼统或为意图句，请让用户给出具体知识/技能名称后再调用。"
+        rec = load_learning_content(user_id, cid)
+        if rec is None:
+            return f"未找到学习内容 content_id={cid}。"
+        if rec.subject_title_locked:
+            if raw[:200] == (rec.title or "").strip()[:200]:
+                return f"课题已锁定为「{rec.title}」，无需重复确认。"
+            return f"课题已锁定为「{rec.title}」，不可再改为「{raw[:80]}」。"
+        rec.title = raw[:200]
+        rec.subject_title_locked = True
+        save_learning_content(user_id, rec)
+        return (
+            f"已锁定学习课题（content_id={cid}）：「{rec.title}」。理由：{rationale}。"
+            "后续摘要与要点可更新，课题名将保持不变。"
+        )
+
+    @tool
     async def scheduler_save_learning_plan(
         learning_plan: str,
         mastery_status: str,
@@ -143,6 +181,7 @@ def build_scheduler_tools():
             rec.plan_phases = phases
         elif raw_json == "[]":
             rec.plan_phases = []
+        rec.subject_title_locked = True
         save_learning_content(user_id, rec)
         return (
             f"已写入学习计划（content_id={cid}）。理由：{rationale}。"
@@ -190,6 +229,7 @@ def build_scheduler_tools():
         if (progress_summary or "").strip():
             rec.progress_summary = (progress_summary or "").strip()[:2000]
         rec.plan_confirmed_at = datetime.now(timezone.utc).isoformat()
+        rec.subject_title_locked = True
         save_learning_content(user_id, rec)
         return (
             f"已提交结构化学习阶段（content_id={cid}），共 {len(phases)} 项。理由：{rationale}。"
@@ -230,6 +270,7 @@ def build_scheduler_tools():
         run_worker_nonblocking,
         merge_user_long_term_profile_blocking,
         queue_merge_user_long_term_profile,
+        scheduler_confirm_learning_subject,
         scheduler_save_learning_plan,
         scheduler_commit_learning_phases,
         scheduler_rag_search,

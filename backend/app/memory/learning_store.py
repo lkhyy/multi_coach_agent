@@ -119,6 +119,8 @@ class LearningContentRecord:
     mastery_status: str = ""
     progress_summary: str = ""
     plan_confirmed_at: str = ""
+    # 课题名经用户确认后锁定；True 后小模型合并不再改写 title
+    subject_title_locked: bool = False
     # 学习计划阶段：每项 title/status/progress_pct（0–100 字符串，与 status 语义一致）
     plan_phases: list[dict[str, str]] = field(default_factory=list)
 
@@ -171,6 +173,7 @@ def load_learning_content(user_id: str, content_id: str) -> LearningContentRecor
         progress_summary=str(data.get("progress_summary") or ""),
         plan_confirmed_at=str(data.get("plan_confirmed_at") or ""),
         plan_phases=_coerce_plan_phases(data.get("plan_phases")),
+        subject_title_locked=bool(data.get("subject_title_locked")),
     )
 
 

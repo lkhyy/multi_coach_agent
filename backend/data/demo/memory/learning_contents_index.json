@@ -41,6 +41,25 @@
           "progress_pct": "0"
         }
       ]
+    },
+    {
+      "content_id": "a69248d3-c749-4132-bbc1-19011f8f6d85",
+      "title": "HTTP 请求格式",
+      "summary": "正在学习 HTTP 请求报文的结构，包括起始行（方法、URL、版本）、请求首部（Host、Accept、Content-Type等）和实体主体，以及各部分的语法与示例。",
+      "keywords": [
+        "HTTP",
+        "请求格式",
+        "起始行",
+        "请求首部",
+        "实体主体",
+        "请求行"
+      ],
+      "updated_at": "2026-05-15T06:15:38.039291+00:00",
+      "has_learning_plan": false,
+      "mastery_status": "",
+      "plan_confirmed_at": "",
+      "aggregate_plan_status_cn": "未完成",
+      "plan_phases": []
     }
   ]
 }

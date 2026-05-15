@@ -69,6 +69,9 @@ class Settings(BaseSettings):
     rag_pdf_ocr_lang: str = "chi_sim+eng"
     rag_pdf_ocr_zoom: float = 2.0
 
+    # BGE-M3 嵌入：空则自动探测本机 HuggingFace 缓存；无法访问 Hub 时请设 BGE_M3_MODEL_PATH 为本地快照目录
+    bge_m3_model_path: str = ""
+
     # Web UI：JWT 与账号（JSON 对象，键为登录名、值为明文密码；生产环境请改强密码并配合 HTTPS）
     jwt_secret: str = "dev-change-me"
     jwt_expire_hours: int = 168

@@ -78,7 +78,8 @@ def _learning_content_system_message(rec: LearningContentRecord) -> SystemMessag
         LEARNING_CONTENT_MARKER,
         "以下是当前对话绑定的「学习内容」长期记忆（主题级），请据此延续进度：",
         f"- content_id: {rec.content_id}",
-        f"- title: {rec.title}",
+        f"- title: {rec.title}"
+        + ("（课题名已锁定，勿建议改名）" if rec.subject_title_locked else ""),
         f"- summary: {rec.summary or '（暂无）'}",
         f"- keywords: {_fmt(rec.keywords)}",
         f"- key_points: {_fmt(rec.key_points)}",

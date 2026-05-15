@@ -1,0 +1,33 @@
+{
+  "content_id": "a69248d3-c749-4132-bbc1-19011f8f6d85",
+  "title": "HTTP 请求格式",
+  "summary": "正在学习 HTTP 请求报文的结构，包括起始行（方法、URL、版本）、请求首部（Host、Accept、Content-Type等）和实体主体，以及各部分的语法与示例。",
+  "keywords": [
+    "HTTP",
+    "请求格式",
+    "起始行",
+    "请求首部",
+    "实体主体",
+    "请求行"
+  ],
+  "key_points": [
+    "HTTP请求报文由起始行、首部、实体主体三部分组成",
+    "请求行格式：<method> <request-URL> <version>，如 GET /index.html HTTP/1.1",
+    "方法（Method）表示客户端想要服务器执行的动作，如GET、POST",
+    "请求URL指定所请求资源的路径，通常使用绝对路径",
+    "HTTP版本常见的有 HTTP/1.0、HTTP/1.1、HTTP/2.0",
+    "请求首部格式为‘名称: 值’，每条占一行",
+    "Host首部在HTTP/1.1中是必需的，指定目标主机",
+    "Accept首部告诉服务器客户端能处理的内容类型",
+    "Content-Type和Content-Length用于携带主体的请求（如POST）",
+    "首部结束后由一个空行（CRLF）标记，之后是主体",
+    "GET、HEAD、DELETE等方法通常没有请求主体",
+    "POST请求常包含表单数据或JSON格式的主体"
+  ],
+  "updated_at": "2026-05-15T06:15:38.039291+00:00",
+  "learning_plan": "",
+  "mastery_status": "",
+  "progress_summary": "",
+  "plan_confirmed_at": "",
+  "plan_phases": []
+}

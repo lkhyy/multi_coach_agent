@@ -2,8 +2,10 @@
   "personality": [],
   "style_preferences": [],
   "learning_goals": [
-    "我要学习大模型"
+    "我要学习大模型",
+    "我要学习http",
+    "我要了解http请求的格式"
   ],
   "stable_facts": [],
-  "updated_at": "2026-05-13T18:02:49.781923+00:00"
+  "updated_at": "2026-05-15T06:15:27.705219+00:00"
 }

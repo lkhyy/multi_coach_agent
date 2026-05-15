@@ -32,6 +32,13 @@ SCHEDULER_SYSTEM_PROMPT = f"""{SCHEDULER_BOOTSTRAP_MARKER}
 
 每轮对话结束后，服务端仍会做**极轻量的规则回写**（无小模型）；深度合并依赖你在合适时机调用上述工具。
 
+## 学习内容（课题）粒度与尽快定名
+
+- **一条「学习内容」**对应用户侧栏里的一个条目，粒度应为**一个大知识点 / 一门小课级主题**（例如「梯度下降与反向传播」「HTTP/1.1 与 HTTP/2 差异」），不要把多个无关大主题混在同一 content 下；若用户明显切换大主题，应引导**新开对话**或绑定另一已有条目。
+- **绑定或新建学习内容后的前 1～2 轮内**：用**极短**话术向用户提议课题名（建议 ≤24 字），并明确问「用这个作课题名可以吗？」或「不对请直接说出你的课题名」；用户认可后**立刻**调用 **`scheduler_confirm_learning_subject`**（`subject_title` 填最终定稿名），以锁定课题名（此后自动合并**不会**再改标题）。
+- 若用户坚持先聊计划：可口头草案，但在调用 **`scheduler_save_learning_plan`** / **`scheduler_commit_learning_phases`** 定稿前，仍应优先完成课题定名或确认用户接受当前侧栏标题作为定稿名。
+- 课题一经 **`scheduler_confirm_learning_subject`** 锁定，**禁止**在回复中擅自改用其它名称指代该课程（可简称，但落盘标题不变）。
+
 ## 当前线程绑定的「学习计划」
 
 当用户已绑定某一学习内容（系统注入的 `[LEARNING_CONTENT_V1]`）后，你应**尽快**与用户对齐分阶段计划；在用户确认各 **P0/P1… 阶段标题、状态与进度百分比** 后，优先调用 **`scheduler_commit_learning_phases`**，传入**非空** `plan_phases_json`（JSON 数组），以便侧栏「学习计划」立即显示结构化阶段。
@@ -43,7 +50,7 @@ SCHEDULER_SYSTEM_PROMPT = f"""{SCHEDULER_BOOTSTRAP_MARKER}
 
 ### 侧栏「马上同步」的机制（供你对用户说明）
 
-同一轮对话内，工具执行完毕时服务端会通过 WebSocket 下发 `tool_end`；前端在收到 **`scheduler_commit_learning_phases`** 或 **`scheduler_save_learning_plan`** 时立即请求 `GET /api/me/memory/learning-contents` 刷新侧栏。整轮调度结束时的 **`run_end`** 会再拉一次列表，与历史消息刷新一起完成，避免遗漏。
+同一轮对话内，工具执行完毕时服务端会通过 WebSocket 下发 `tool_end`；前端在收到 **`scheduler_confirm_learning_subject`**、**`scheduler_commit_learning_phases`** 或 **`scheduler_save_learning_plan`** 时立即请求 `GET /api/me/memory/learning-contents` 刷新侧栏。整轮调度结束时的 **`run_end`** 会再拉一次列表，与历史消息刷新一起完成，避免遗漏。
 
 ## 阻塞 vs 非阻塞（子智能体工具选择）
 

@@ -30,6 +30,14 @@ type SessionResponse = {
   storage?: string;
 };
 
+type SessionLearningPlanDto = {
+  bound: boolean;
+  content_id: string | null;
+  title: string;
+  learning_plan?: string;
+  plan_phases?: PlanPhaseDto[];
+};
+
 type LongTermMemoryDto = {
   personality: string[];
   style_preferences: string[];
@@ -257,6 +265,10 @@ export default function App() {
   const [selectedLearningId, setSelectedLearningId] = useState<string | null>(null);
   const [learningDetail, setLearningDetail] = useState<LearningContentDetailDto | null>(null);
   const [learningDetailError, setLearningDetailError] = useState<string | null>(null);
+  const [activeLearningContentId, setActiveLearningContentId] = useState<string | null>(null);
+  const [sidebarPlan, setSidebarPlan] = useState<{ title: string; phases: PlanPhaseDto[] } | null>(null);
+  const [sidebarPlanLoading, setSidebarPlanLoading] = useState(false);
+  const [sidebarPlanError, setSidebarPlanError] = useState<string | null>(null);
   const [ragUploading, setRagUploading] = useState(false);
   const [ragUploadHint, setRagUploadHint] = useState<string | null>(null);
   const [ragUploadPercent, setRagUploadPercent] = useState(0);
@@ -271,31 +283,15 @@ export default function App() {
   const { wsRef, connect } = useAuthedWs(accessToken, wsInboundRef, wsOnCloseRef);
 
   const learningPhaseSidebarRows = useMemo(() => {
-    const items = learningItems ?? [];
-    const sorted = [...items].sort((a, b) => {
-      const ta = new Date(a.updated_at || 0).getTime();
-      const tb = new Date(b.updated_at || 0).getTime();
-      return tb - ta;
-    });
-    type Row = { key: string; phaseLabel: string; pct: number; statusCn: string };
-    const rows: Row[] = [];
-    for (const it of sorted) {
-      const phases = it.plan_phases ?? [];
-      const hasSavedPlan = Boolean(it.has_learning_plan) || phases.length > 0;
-      if (!hasSavedPlan) continue;
-      const theme = it.title?.trim() || "未命名主题";
-      if (phases.length === 0) continue;
-      phases.forEach((p, i) => {
-        rows.push({
-          key: `${it.content_id}-p${i}`,
-          phaseLabel: `「${theme}」P${i}：${(p.title || "").trim() || "—"}`,
-          pct: phaseProgressPct(p),
-          statusCn: phaseStatusCn(p.status),
-        });
-      });
-    }
-    return rows;
-  }, [learningItems]);
+    if (!activeLearningContentId || !sidebarPlan) return [];
+    const phases = sidebarPlan.phases ?? [];
+    return phases.map((p, i) => ({
+      key: `${activeLearningContentId}-p${i}`,
+      phaseLabel: `P${i + 1}：${(p.title || "").trim() || "—"}`,
+      pct: phaseProgressPct(p),
+      statusCn: phaseStatusCn(p.status),
+    }));
+  }, [activeLearningContentId, sidebarPlan]);
 
   const dialogueMessages = useMemo(
     () => history.filter((m) => m.role === "user" || m.role === "assistant"),
@@ -461,6 +457,63 @@ export default function App() {
     }
   }, [accessToken, logout]);
 
+  const loadLearningPlanForContent = useCallback(
+    async (contentId: string) => {
+      if (!accessToken) return;
+      setSidebarPlanLoading(true);
+      setSidebarPlanError(null);
+      setSidebarPlan(null);
+      try {
+        const r = await fetch(`/api/me/memory/learning-contents/${encodeURIComponent(contentId)}`, {
+          headers: authHeaders(accessToken),
+        });
+        if (r.status === 401) {
+          logout();
+          return;
+        }
+        if (!r.ok) {
+          setSidebarPlanError(r.status === 404 ? "学习内容不存在" : `HTTP ${r.status}`);
+          return;
+        }
+        const data = await readJson<LearningContentDetailDto>(r);
+        setSidebarPlan({
+          title: data.title?.trim() || "未命名主题",
+          phases: Array.isArray(data.plan_phases) ? data.plan_phases : [],
+        });
+      } catch (e) {
+        setSidebarPlanError(e instanceof Error ? e.message : String(e));
+      } finally {
+        setSidebarPlanLoading(false);
+      }
+    },
+    [accessToken, logout],
+  );
+
+  const verifySessionLearningBinding = useCallback(
+    async (contentId: string, tid: string): Promise<boolean> => {
+      if (!accessToken) return false;
+      try {
+        const r = await fetch(`/api/me/session/${encodeURIComponent(tid)}/learning-plan`, {
+          headers: authHeaders(accessToken),
+        });
+        if (r.status === 401) {
+          logout();
+          return false;
+        }
+        if (!r.ok) return false;
+        const data = await readJson<SessionLearningPlanDto>(r);
+        if (!data.bound || data.content_id !== contentId) {
+          setSidebarPlanError("当前对话与所选学习内容未绑定，请重新选择学习内容。");
+          return false;
+        }
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    [accessToken, logout],
+  );
+
   useEffect(() => {
     wsOnCloseRef.current = () => {
       setAwaitingReply(false);
@@ -494,10 +547,14 @@ export default function App() {
       if (data.type === "tool_end") {
         setDebugLog((s) => s + `\n[tool_end] ${data.name ?? ""} -> ${data.output ?? ""}\n`);
         if (
+          data.name === "scheduler_confirm_learning_subject" ||
           data.name === "scheduler_save_learning_plan" ||
           data.name === "scheduler_commit_learning_phases"
         ) {
           void loadLearningContents();
+          if (activeLearningContentId) {
+            void loadLearningPlanForContent(activeLearningContentId);
+          }
         }
         return;
       }
@@ -505,6 +562,9 @@ export default function App() {
         setAwaitingReply(false);
         void loadHistory({ clearDraftOnSuccess: true });
         void loadLearningContents();
+        if (activeLearningContentId) {
+          void loadLearningPlanForContent(activeLearningContentId);
+        }
         return;
       }
       if (data.type === "warning") {
@@ -516,7 +576,7 @@ export default function App() {
         setDebugLog((s) => s + `\n[error] ${data.message ?? ""}\n`);
       }
     };
-  }, [loadHistory, loadLearningContents]);
+  }, [loadHistory, loadLearningContents, loadLearningPlanForContent, activeLearningContentId]);
 
   useEffect(() => {
     setAwaitingReply(false);
@@ -556,10 +616,24 @@ export default function App() {
         return;
       }
       const data = await readJson<{ access_token: string; user_id: string }>(r);
+      const uid = data.user_id;
+      const nid = crypto.randomUUID();
       localStorage.setItem(TOKEN_KEY, data.access_token);
-      localStorage.setItem(USER_KEY, data.user_id);
+      localStorage.setItem(USER_KEY, uid);
+      sessionStorage.setItem(threadStorageKey(uid), nid);
       setAccessToken(data.access_token);
-      setUserId(data.user_id);
+      setUserId(uid);
+      setThreadId(nid);
+      setHistory([]);
+      setDraftAssistant("");
+      setInput("");
+      setDebugLog("");
+      setHistoryError(null);
+      setAwaitingReply(false);
+      setActiveLearningContentId(null);
+      setSidebarPlan(null);
+      setSidebarPlanError(null);
+      setSidebarPlanLoading(false);
       setLoginPass("");
       setScreen("chat");
     } catch (ex) {
@@ -569,6 +643,21 @@ export default function App() {
 
   const startNewConversation = () => {
     if (!userId) return;
+    const hasDialogue = dialogueMessages.length > 0;
+    const hasStreamingDraft = draftAssistant.trim().length > 0;
+    const reuseEmptyThread =
+      Boolean(threadId) && !hasDialogue && !hasStreamingDraft && !awaitingReply;
+    if (reuseEmptyThread) {
+      setInput("");
+      setDebugLog("");
+      setHistoryError(null);
+      setAwaitingReply(false);
+      setActiveLearningContentId(null);
+      setSidebarPlan(null);
+      setSidebarPlanError(null);
+      setSidebarPlanLoading(false);
+      return;
+    }
     const nid = crypto.randomUUID();
     sessionStorage.setItem(threadStorageKey(userId), nid);
     setThreadId(nid);
@@ -576,12 +665,20 @@ export default function App() {
     setDraftAssistant("");
     setInput("");
     setDebugLog("");
+    setHistoryError(null);
     setAwaitingReply(false);
+    setActiveLearningContentId(null);
+    setSidebarPlan(null);
+    setSidebarPlanError(null);
+    setSidebarPlanLoading(false);
   };
 
   const openLearningContentThread = async (contentId: string) => {
     if (!accessToken) return;
     setLearningListError(null);
+    setSidebarPlanError(null);
+    setActiveLearningContentId(contentId);
+    void loadLearningPlanForContent(contentId);
     try {
       const r = await fetch(
         `/api/me/memory/learning-contents/${encodeURIComponent(contentId)}/preferred-thread`,
@@ -601,15 +698,21 @@ export default function App() {
               ? "该主题尚无已绑定的对话，请先在对应学习对话中打开。"
               : `HTTP ${r.status}`;
         setLearningListError(msg);
+        setActiveLearningContentId(null);
+        setSidebarPlan(null);
         return;
       }
       const data = await readJson<{ thread_id: string }>(r);
       if (!userId) return;
       sessionStorage.setItem(threadStorageKey(userId), data.thread_id);
       setThreadId(data.thread_id);
+      await loadHistory();
+      await verifySessionLearningBinding(contentId, data.thread_id);
       void loadLearningContents();
     } catch (e) {
       setLearningListError(e instanceof Error ? e.message : String(e));
+      setActiveLearningContentId(null);
+      setSidebarPlan(null);
     }
   };
 
@@ -1021,7 +1124,7 @@ export default function App() {
                   <li key={it.content_id}>
                     <button
                       type="button"
-                      className="sidebar-learning-btn"
+                      className={`sidebar-learning-btn${activeLearningContentId === it.content_id ? " is-active" : ""}`}
                       onClick={() => void openLearningContentThread(it.content_id)}
                       title={it.title?.trim() || "未命名主题"}
                     >
@@ -1037,41 +1140,46 @@ export default function App() {
         </div>
         <div className="sidebar-block">
           <h2 className="sidebar-block-title">学习计划</h2>
-          {learningListError ? <p className="error-text sidebar-note">{learningListError}</p> : null}
-          {learningItems === null && !learningListError ? (
-            <p className="muted sidebar-note">加载计划表…</p>
+          {!activeLearningContentId ? (
+            <p className="muted sidebar-note">点击左侧学习内容后，将加载该主题的学习计划。</p>
+          ) : sidebarPlanLoading ? (
+            <p className="muted sidebar-note">加载计划…</p>
+          ) : sidebarPlanError ? (
+            <p className="error-text sidebar-note">{sidebarPlanError}</p>
           ) : (
-            <div className="sidebar-table-wrap">
-              <table className="learn-plan-table learn-plan-table-phases">
-                <thead>
-                  <tr>
-                    <th>阶段</th>
-                    <th>进度</th>
-                    <th>完成状态</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {learningPhaseSidebarRows.length === 0 ? (
-                    <tr>
-                      <td colSpan={3} className="muted learn-plan-empty-row">
-                        暂无阶段计划
-                      </td>
-                    </tr>
-                  ) : (
-                    learningPhaseSidebarRows.map((row) => (
-                      <tr key={row.key}>
-                        <td className="learn-col-phase">{row.phaseLabel}</td>
-                        <td className="learn-col-pct">{row.pct}%</td>
-                        <td>{row.statusCn}</td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-              {learningItems && learningItems.length === 0 ? (
-                <p className="muted sidebar-note">暂无学习主题；在对话中开启学习后将显示于此。</p>
+            <>
+              {sidebarPlan?.title ? (
+                <p className="sidebar-plan-topic muted small">{sidebarPlan.title}</p>
               ) : null}
-            </div>
+              <div className="sidebar-table-wrap">
+                <table className="learn-plan-table learn-plan-table-phases">
+                  <thead>
+                    <tr>
+                      <th>阶段</th>
+                      <th>进度</th>
+                      <th>完成状态</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {learningPhaseSidebarRows.length === 0 ? (
+                      <tr>
+                        <td colSpan={3} className="muted learn-plan-empty-row">
+                          该主题暂无阶段计划
+                        </td>
+                      </tr>
+                    ) : (
+                      learningPhaseSidebarRows.map((row) => (
+                        <tr key={row.key}>
+                          <td className="learn-col-phase">{row.phaseLabel}</td>
+                          <td className="learn-col-pct">{row.pct}%</td>
+                          <td>{row.statusCn}</td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </div>
       </aside>
@@ -1081,7 +1189,16 @@ export default function App() {
         <h1 className="title-inline">学习助手</h1>
         <div className="top-actions">
           <span className="badge user-badge">已登录：{userId}</span>
-          <button type="button" onClick={() => void loadHistory()}>
+          <button
+            type="button"
+            onClick={() => {
+              void loadHistory();
+              if (activeLearningContentId && threadId) {
+                void verifySessionLearningBinding(activeLearningContentId, threadId);
+                void loadLearningPlanForContent(activeLearningContentId);
+              }
+            }}
+          >
             刷新会话
           </button>
           <input
