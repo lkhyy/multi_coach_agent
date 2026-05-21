@@ -21,3 +21,4 @@ def fts_match_query(text: str, *, max_tokens: int = 24) -> str:
     if not parts:
         return ""
     return " OR ".join(parts)
+
